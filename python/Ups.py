@@ -5,69 +5,92 @@ import random
 
 class Ups:
 
-    def __init__(self, fr, mbc, sp, e, cr, id):
-        self.failure_rate = fr    # probability to enter bypass
-        self.max_battery_cap = mbc     # Battery capacity in watt hours
+    def __init__(self, fr, mbc, sp, e, be, mbd, cr, id):
+        self.failure_rate = fr       # probability to enter bypass
+        self.max_battery_cap = mbc   # Battery capacity in watt hours
         self.battery_cap = self.max_battery_cap
-        self.static_power = sp    # power consumption when load idle
-        self.efficiency = e       # Power out / Power in
-        self.charge_rate = cr     # Charging rate (percent charge/hour, consider linear)
+        self.static_power = sp       # power consumption when load idle
+        self.efficiency = e          # Power out / Power in passing straight through
+        self.battery_efficiency = be # Efficiency of battery
+        self.max_battery_draw = mbd  # Max power draw for the battery
+        self.charge_rate = cr        # Charging rate (percent charge/hour, consider linear)
         self.static_bypass = False
-        self.overdraw = 0
+        self.deficit = 0
         self.id = id
-    
-    # Returns the power drawn
-    def step(self, load, supply): # Step one hour
 
-        # Can only use this portion of the energy in
-        usableSupply = supply * self.efficiency
 
-        # Check if it will randomly fail
-        randNum = random.random() # [0.0, 1.0)
+    def step(self, load, supply): # Steps one hour
+
+        self.deficit = 0
+        randNum = random.random()
         if (self.static_bypass or randNum < self.failure_rate):
-            self.static_bypass = True # switch to bypass if internal error
-            
-            #print("Entering Static bypass mode on ups", self.id)
-            return min(load, usableSupply)
-        else:
-            # Non-failure
-
-            # Usually all power will come from the supply to load
-            # If not enough, takes from battery
-            powerLeft = load - usableSupply
-
-            self.overdraw = 0
-
-            # If negative, take from battery
-            if (powerLeft > 0):
-                # use battery power to fill extra space
-                self.battery_cap -= powerLeft # watt hours - load watts * 1hour step
-                if self.battery_cap < 0:
-                    self.overdraw = -self.battery_cap
-                    self.battery_cap = 0
-                return supply # Using all of supply
+            self.static_bypass = True
+            supplyMin = load / self.efficiency # Minimum amount needed from supply
+            if supply < supplyMin:
+                # have a deficit of power
+                self.deficit = load - supply * self.efficiency
+                return supply # using all of power, but isn't enough
             else:
-                # If we aren't using battery, charge it with leftover power
+                return supplyMin # Only using what is needed and available
+        else:
+            # Not in static bypass
+
+            usableSupply = supply * self.efficiency
+
+            neededPower = load + self.static_power
+            
+            # If usable supply can handle load, also charge battery
+            if usableSupply >= neededPower:
+                powerLeft = usableSupply - neededPower
                 if (self.battery_cap < self.max_battery_cap):
-                    # Joules it would charge in an hour
-                    joules = min(self.max_battery_cap-self.battery_cap, self.charge_rate * self.max_battery_cap)
-                    power = joules / 60 / 60 # joules per second
-                    chargePower = min(power, -powerLeft)
-                    self.battery_cap += chargePower * 60 * 60
-                    return load / self.efficiency + chargePower
-                else:
-                    return min(load / self.efficiency + self.static_power, supply)
+                    # Charge at whatever the charging rate is
+                    # If that would overfill, then just take the minimum power
+                    # ChargeRate(percent/hour)*MaxCap(watthours)*1hour = watt hours charged
+                    wattHourCharge = min(self.charge_rate * self.max_battery_cap, self.max_battery_cap - self.battery_cap)
+                    battPower = min(powerLeft, wattHourCharge) # Can only charge with the power left
+                    self.battery_cap += battPower # Add the watt hours to the battery capacity
                     
+                    # take the battery charging power away used power
+                    powerLeft -= battPower
+
+                    # Powerleft is in terms of usable supply power, convert back to consumed
+                    supplyUsed = (usableSupply - powerLeft) / self.efficiency
+                    return supplyUsed
+                else:
+                    # Not charging the battery, so we will just return the used supply
+                    return neededPower / self.efficiency
+            
+            else:
+                # not enough power from supply alone
+                # Need power from battery to continue
+                neededBatt = neededPower - usableSupply 
+                availableBatt = self.battery_cap * self.battery_efficiency
+                if neededBatt > self.max_battery_draw:
+                    print("Need more power from battery than can be drawn")
+                    batteryUsed = min(availableBatt, self.max_battery_draw)
+                    self.deficit = neededBatt - batteryUsed
+                    self.battery_cap -= batteryUsed / self.battery_efficiency
+                    return supply # Still using all of supply
+                else:
+                    # Able to draw needed power if the battery is charged enough
+                    if availableBatt > neededBatt:
+                        self.battery_cap -= neededBatt / self.battery_efficiency
+                    else:
+                        print("Battery not charged enough")
+                        self.battery_cap = 0
+                        self.deficit = neededBatt - availableBatt
+                    return supply # still using all of supply
 
         
-    def get_overdraw(self):
-        return self.overdraw
+    def get_deficit(self):
+        return self.deficit
 
     def get_static_bypass(self):
         return self.static_bypass
     
     def set_static_bypass(self):
         self.static_bypass = False
+        self.battery_cap = 0.5*self.max_battery_cap # assume battery loses charge during maintenance
     
     def get_battery_cap(self):
         return self.battery_cap

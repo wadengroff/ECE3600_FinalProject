@@ -8,25 +8,25 @@ import numpy as np
 class redundancyN:
 
 
-    def __init__(self, ups_fr, ups_mbc, ups_sp, ups_e, ups_cr, mtime, simHours):
+    def __init__(self, ups_fr, ups_mbc, ups_sp, ups_e, ups_be, ups_mbd, ups_cr, mtime, simHours):
         
         # Initialize the single UPS
-        self.ups = Ups(ups_fr, ups_mbc, ups_sp, ups_e, ups_cr, 0)
+        self.ups = Ups(ups_fr, ups_mbc, ups_sp, ups_e, ups_be, ups_mbd, ups_cr, 0)
         self.maintenanceTime = mtime
         self.staticBypassCounter = 0
         self.battery_capacities = np.zeros(simHours)
         self.power_drawn = np.zeros(simHours)
-        self.overdraw = 0
-        self.overdrawHours = 0
+        self.deficit = 0
+        self.deficitHours = 0
 
     # each step will be one hour every time
     def stepHour(self, load, utility, hour):
         power = self.ups.step(load, utility)
         
-        od = self.ups.get_overdraw()
-        if (od != 0):
-            self.overdraw += od
-            self.overdrawHours += 1
+        deficit = self.ups.get_deficit()
+        if (deficit != 0):
+            self.deficit += deficit
+            self.deficitHours += 1
 
 
         if self.ups.get_static_bypass():
@@ -45,7 +45,7 @@ class redundancyN:
         if self.ups.get_static_bypass():
             return utility > load
         else:
-            return od == 0
+            return deficit == 0
     
     def get_battery_capacities(self):
         return self.battery_capacities
@@ -53,9 +53,9 @@ class redundancyN:
     def get_power_draw(self):
         return self.power_drawn
     
-    def get_total_overdrawn(self):
-        return self.overdraw
+    def get_total_deficit(self):
+        return self.deficit
     
-    def get_overdrawn_hours(self):
-        return self.overdrawHours
+    def get_deficit_hours(self):
+        return self.deficitHours
         

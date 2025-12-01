@@ -5,7 +5,7 @@ import random
 from Ups import Ups
 from redundancyN import redundancyN
 
-simHours = 356*24
+simHours = 365*24
 times = np.zeros(simHours)
 loads = np.zeros(simHours)
 supplies = np.zeros(simHours)
@@ -18,7 +18,7 @@ supplies = np.zeros(simHours)
 #   ups_cr   = charge rate of the battery (in percent charge per hour)
 #   mtime    = time (in hours) to repair problems with a ups
 #   simHours = length of the simulation in hours
-inst = redundancyN(0.01, 100, 15, 0.8, 0.1, 48, simHours)
+inst = redundancyN(0.01, 5000, 15, 0.95, 0.8, 500, 0.1, 48, simHours)
 
 staticBypassCounter = 0
 failedHours = 0
@@ -27,8 +27,8 @@ failedHours = 0
 for i in range(0,simHours):
     times[i] = i
 
-    load = random.randint(0, 200)
-    supply = random.randint(150, 300)
+    load = random.randint(500, 2000)
+    supply = random.randint(1500, 3000)
     
     if not inst.stepHour(load, supply, i):
         failedHours += 1
@@ -55,8 +55,8 @@ print("")
 print("Failed for", failedHours/24, "days")
 print("i.e.", 100*failedHours/(simHours), "Percent failure\n")
 
-print("Overdrew power for", inst.get_overdrawn_hours(), "hours")
-print("Total power overdrawn was", inst.get_total_overdrawn(), "Watts")
+print("Overdrew power for", inst.get_deficit_hours(), "hours")
+print("Total power overdrawn was", inst.get_total_deficit(), "Watts")
 
 
 plt.figure(0)
