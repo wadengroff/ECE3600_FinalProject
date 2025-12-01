@@ -21,10 +21,8 @@ class redundancyN:
     def stepHour(self, load, utility, hour):
         power = self.ups.step(load, utility)
 
-        if (self.staticBypassCounter != 0):
+        if self.ups.get_static_bypass():
             self.staticBypassCounter += 1
-        elif self.ups.get_static_bypass():
-            self.staticBypassCounter = 1
         
         if (self.staticBypassCounter == self.maintenanceTime):
             self.ups.set_static_bypass()
@@ -36,7 +34,10 @@ class redundancyN:
             self.battery_capacities[hour] = self.ups.get_battery_cap()
             self.power_drawn[hour] = power
 
-        return power
+        if self.ups.get_static_bypass() and utility < load:
+            return False
+        else:
+            return True
     
     def get_battery_capacities(self):
         return self.battery_capacities
