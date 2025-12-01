@@ -5,7 +5,7 @@ import random
 
 class Ups:
 
-    def __init__(self, fr, mbc, sp, e, be, mbd, cr, id):
+    def __init__(self, fr, mbc, sp, e, be, mbd, cr, mtime, id):
         self.failure_rate = fr       # probability to enter bypass
         self.max_battery_cap = mbc   # Battery capacity in watt hours
         self.battery_cap = self.max_battery_cap
@@ -16,6 +16,8 @@ class Ups:
         self.charge_rate = cr        # Charging rate (percent charge/hour, consider linear)
         self.static_bypass = False
         self.deficit = 0
+        self.maintenanceTime = mtime
+        self.maintenanceCounter = 0
         self.id = id
 
 
@@ -25,6 +27,13 @@ class Ups:
         randNum = random.random()
         if (self.static_bypass or randNum < self.failure_rate):
             self.static_bypass = True
+
+            # Check if we've reached the end of the maintenance window
+            self.maintenanceCounter += 1
+            if self.maintenanceCounter == self.maintenanceTime:
+                self.static_bypass = False
+                self.maintenanceCounter = 0
+            
             supplyMin = load / self.efficiency # Minimum amount needed from supply
             if supply < supplyMin:
                 # have a deficit of power
