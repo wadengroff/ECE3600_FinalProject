@@ -13,35 +13,38 @@ class Ups:
         self.efficiency = e       # Power out / Power in
         self.charge_rate = cr     # Charging rate (percent charge/hour, consider linear)
         self.static_bypass = False
+        self.overdraw = 0
         self.id = id
     
     # Returns the power drawn
     def step(self, load, supply): # Step one hour
 
-        if (self.static_bypass):
-            return 0
+        # Can only use this portion of the energy in
+        usableSupply = supply * self.efficiency
 
         # Check if it will randomly fail
         randNum = random.random() # [0.0, 1.0)
-        if (randNum < self.failure_rate):
+        if (self.static_bypass or randNum < self.failure_rate):
             self.static_bypass = True # switch to bypass if internal error
-            print("Entering Static bypass mode on ups", self.id)
-            return 0
+            
+            #print("Entering Static bypass mode on ups", self.id)
+            return min(load, usableSupply)
         else:
             # Non-failure
-
-            # can only use this portion of the energy
-            usableSupply = supply * self.efficiency
 
             # Usually all power will come from the supply to load
             # If not enough, takes from battery
             powerLeft = load - usableSupply
 
+            self.overdraw = 0
+
             # If negative, take from battery
             if (powerLeft > 0):
-                print("Not enough supply for load")
                 # use battery power to fill extra space
                 self.battery_cap -= powerLeft # watt hours - load watts * 1hour step
+                if self.battery_cap < 0:
+                    self.overdraw = -self.battery_cap
+                    self.battery_cap = 0
                 return supply # Using all of supply
             else:
                 # If we aren't using battery, charge it with leftover power
@@ -57,6 +60,8 @@ class Ups:
                     
 
         
+    def get_overdraw(self):
+        return self.overdraw
 
     def get_static_bypass(self):
         return self.static_bypass
