@@ -21,6 +21,12 @@ class Ups:
         self.id = id
 
 
+    def getHighestLoad(self, utility):
+        batteryAvailable = self.battery_cap * self.battery_efficiency
+        batteryMax = min(self.max_battery_draw, batteryAvailable)
+
+        return utility * self.efficiency + batteryMax - self.static_power
+
     def step(self, load, supply): # Steps one hour
 
         self.deficit = 0
@@ -34,13 +40,13 @@ class Ups:
                 self.static_bypass = False
                 self.maintenanceCounter = 0
             
-            supplyMin = load / self.efficiency # Minimum amount needed from supply
+            # assume we're still drawing static power
+            # Efficiency not relevant because it's a straight connection
+            supplyMin = load + self.static_power # Minimum amount needed from supply
             if supply < supplyMin:
                 # have a deficit of power
-                self.deficit = load - supply * self.efficiency
-                return supply # using all of power, but isn't enough
-            else:
-                return supplyMin # Only using what is needed and available
+                self.deficit = supplyMin - supply
+            return min(self.static_power, supply) # Don't report as using load power
         else:
             # Not in static bypass
 

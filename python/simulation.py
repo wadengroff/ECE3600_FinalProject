@@ -5,8 +5,9 @@ import random
 from Ups import Ups
 from redundancyN import redundancyN
 from redundancyIsolated import redundancyIsolated
+from redundancyNp1 import redundancyNp1
 
-simHours = 365*24
+simHours = 28*24
 times = np.zeros(simHours)
 loads = np.zeros(simHours)
 supplies = np.zeros(simHours)
@@ -23,7 +24,7 @@ ups_mtime = 48   # Maintenance time for ups (time to fix static bypass problems)
 
 instN = redundancyN(ups_fr, ups_mbc, ups_sp, ups_e, ups_be, ups_mbd, ups_cr, ups_mtime, simHours)
 instIso = redundancyIsolated(ups_fr, ups_mbc, ups_sp, ups_e, ups_be, ups_mbd, ups_cr, ups_mtime, simHours)
-
+instNp1 = redundancyNp1(ups_fr, ups_mbc, ups_sp, ups_e, ups_be, ups_mbd, ups_cr, ups_mtime, simHours)
 
 
 for i in range(0,simHours):
@@ -34,6 +35,7 @@ for i in range(0,simHours):
     
     instN.stepHour(load, supply, i)
     instIso.stepHour(load, supply, i)
+    instNp1.stepHour(load, supply, i)
 
     loads[i] = load
     supplies[i] = supply
@@ -76,6 +78,15 @@ isoMultiplier = isoPower.sum()/powerDrawn.sum()
 print("Isolated redundancy drew", isoMultiplier, "Times the power of N")
 print("Failed for", failedHours/isoFailedHours, "times fewer hours")
 
+
+print("\n\n")
+print("N+1 Redundancy Model:")
+np1Power = instNp1.get_power_draw()
+print("N+1 drew average of", np1Power.sum()/simHours)
+np1FailedHours = instNp1.get_deficit_hours()
+print("N+1 failed for", np1FailedHours/24, "days")
+print("i.e.", 100*np1FailedHours/simHours, "Percent failure\n")
+
 plt.figure(0)
 plt.plot(times, batteryCap)
 plt.title("Battery Capacity over time")
@@ -92,5 +103,12 @@ plt.figure(2)
 plt.plot(times, supplies, label='Supply')
 plt.plot(times, loads, label='load')
 plt.title("Supply and load over time")
+
+np1Batt0 = instNp1.get_batt0()
+np1Batt1 = instNp1.get_batt1()
+plt.figure(3)
+plt.plot(times, np1Batt0, label='Battery 0')
+plt.plot(times, np1Batt1, label='Battery 1')
+plt.title("Battery Charges over Time for N+1")
 
 plt.show()

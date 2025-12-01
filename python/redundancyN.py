@@ -5,6 +5,20 @@ from Ups import Ups
 
 import numpy as np
 
+
+
+# Models the N Redundancy Configuration
+#
+# Diagram:
+#
+#              Utility
+#                 |
+#                UPS
+#                 |
+#               Load
+#
+# This is the simplest model, providing the minimum protection possible
+# for datacenter racks
 class redundancyN:
 
 
@@ -19,7 +33,16 @@ class redundancyN:
 
     # each step will be one hour every time
     def stepHour(self, load, utility, hour):
-        power = self.ups.step(load, utility)
+        
+        if self.ups.get_static_bypass():
+            # when in static bypass mode, ups only reports the static power used
+            # need to add back in the load here
+            power = load + self.ups.step(load, utility)
+            power = min(power, utility) # If there was a deficit, repot utility
+        else:
+            power = self.ups.step(load, utility)
+
+        
         
         deficit = self.ups.get_deficit()
         if (deficit != 0):
