@@ -36,6 +36,7 @@ class redundancyNp1:
         self.power_drawn1 = np.zeros(simHours)
         self.totalDeficit = 0
         self.deficitHours = 0
+        self.unprotectedHours = 0
 
     def stepHour(self, load, utility, hour):
         idealLoad = load / 2 # Ideally evenly distribute load
@@ -55,6 +56,7 @@ class redundancyNp1:
                 if (self.ups1.get_deficit() != 0):
                     print("Deficit should have been exactly 0 for ups1")
                 deficit = load - max0 - max1
+                print("Deficit is", deficit, "With supply", utility, " and load", load)
             elif max0 >= idealLoad and max1 >= idealLoad:
                 power0 = self.ups0.step(idealLoad, distrUtility)
                 power1 = self.ups1.step(idealLoad, distrUtility)
@@ -82,10 +84,16 @@ class redundancyNp1:
             # These deficits should both be equals
             deficit = self.ups0.get_deficit() + self.ups1.get_deficit()
 
+            # This part seems okay
+            # if deficit > 0:
+            #     print("Deficit 0 in static bypass with", utility, "supply")
+            #     print("Load is", load)
+
         # ONLY ups0 is in static bypass
         elif self.ups0.get_static_bypass():
             power1 = self.ups1.step(load, distrUtility) # Take as much from here as possible
             leftover = self.ups1.get_deficit()
+            #print("Leftover:", leftover, " and utility for other=", distrUtility)
             power0 = self.ups0.step(leftover, distrUtility)
 
             # UPS 0 in static bypass, so load power was not included
@@ -95,6 +103,7 @@ class redundancyNp1:
             totalPower = power0 + power1
             # Total deficit will come from ups0 since it should handle deficit from 1
             deficit = self.ups0.get_deficit()
+
         else: # self.ups1.get_static_bypass()
             power0 = self.ups0.step(load, distrUtility)
             leftover = self.ups0.get_deficit()
@@ -114,6 +123,9 @@ class redundancyNp1:
         self.power_drawn[hour] = totalPower
         self.power_drawn0[hour] = power0
         self.power_drawn1[hour] = power1
+
+        if self.ups0.get_static_bypass() and self.ups1.get_static_bypass():
+            self.unprotectedHours += 1
 
         if deficit != 0:
             self.totalDeficit += deficit
@@ -143,4 +155,7 @@ class redundancyNp1:
     
     def get_deficit_hours(self):
         return self.deficitHours
+
+    def get_unprotected_hours(self):
+        return self.unprotectedHours
 

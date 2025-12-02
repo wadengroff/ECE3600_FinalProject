@@ -30,6 +30,7 @@ class redundancyN:
         self.power_drawn = np.zeros(simHours)
         self.deficit = 0
         self.deficitHours = 0
+        self.unprotectedHours = 0
 
     # each step will be one hour every time
     def stepHour(self, load, utility, hour):
@@ -39,6 +40,7 @@ class redundancyN:
             # need to add back in the load here
             power = load + self.ups.step(load, utility)
             power = min(power, utility) # If there was a deficit, repot utility
+            self.unprotectedHours += 1
         else:
             power = self.ups.step(load, utility)
 
@@ -69,4 +71,7 @@ class redundancyN:
     
     def get_deficit_hours(self):
         return self.deficitHours
+    
+    def get_unprotected_hours(self):
+        return self.unprotectedHours
         

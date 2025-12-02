@@ -40,6 +40,7 @@ class redundancyIsolated:
         self.sec_power_drawn = np.zeros(simHours)
         self.deficit = 0
         self.deficitHours = 0
+        self.unprotectedHours = 0
 
     # each step will be one hour every time
     def stepHour(self, load, utility, hour):
@@ -79,6 +80,9 @@ class redundancyIsolated:
         self.prim_batt_capacities[hour] = self.primaryUps.get_battery_cap()
         self.sec_batt_capacities[hour] = self.secondaryUps.get_battery_cap()
 
+        if self.primaryUps.get_static_bypass() and self.secondaryUps.get_static_bypass():
+            self.unprotectedHours += 1
+
         mainDeficit = self.primaryUps.get_deficit()
         if mainDeficit != 0:
             self.deficit += mainDeficit
@@ -108,3 +112,5 @@ class redundancyIsolated:
     def get_deficit_hours(self):
         return self.deficitHours
 
+    def get_unprotected_hours(self):
+        return self.unprotectedHours

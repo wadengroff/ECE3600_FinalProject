@@ -81,7 +81,7 @@ class Ups:
                 neededBatt = neededPower - usableSupply 
                 availableBatt = self.battery_cap * self.battery_efficiency
                 if neededBatt > self.max_battery_draw:
-                    print("Need more power from battery than can be drawn")
+                    #print("Need more power from battery than can be drawn")
                     batteryUsed = min(availableBatt, self.max_battery_draw)
                     self.deficit = neededBatt - batteryUsed
                     self.battery_cap -= batteryUsed / self.battery_efficiency
@@ -91,7 +91,7 @@ class Ups:
                     if availableBatt > neededBatt:
                         self.battery_cap -= neededBatt / self.battery_efficiency
                     else:
-                        print("Battery not charged enough")
+                        #print("Battery not charged enough")
                         self.battery_cap = 0
                         self.deficit = neededBatt - availableBatt
                     return supply # still using all of supply
