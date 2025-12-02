@@ -66,7 +66,7 @@ for i in range(0,simHours):
     load += load_offset
 
     #supply = random.randint(round(capacity*0.69), round(capacity*0.76))
-    supply = genGaussian(capacity*0.8, capacity*0.1)
+    supply = genGaussian(capacity*0.74, capacity*0.02)
 
     instN.stepHour(load, supply, i)
     instIso.stepHour(load, supply, i)
